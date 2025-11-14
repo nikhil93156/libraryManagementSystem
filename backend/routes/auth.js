@@ -22,12 +22,17 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  console.log("Login endpoint hit");
   try {
+    console.log("Login request body:", req.body);
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ message: 'Missing fields' });
     const user = await User.findOne({ username });
+    console.log("Login attempt for user:", username, "Found user:", user, "user password hash:", user.password);
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-    const ok = await bcrypt.compare(password, user.password);
+    console.log("Comparing:", password, "WITH HASH:", user.password);
+    const ok = await bcrypt.compare(password.trim(), user.password);
+    console.log("Password match:", ok);
     if (!ok) return res.status(400).json({ message: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id, role: user.role, username: user.username }, secret, { expiresIn: '8h' });
     res.json({ token, role: user.role, username: user.username, id: user._id });
