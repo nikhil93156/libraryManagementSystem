@@ -1,11 +1,11 @@
-import React from 'react';
+
 import { Routes, Route, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Maintenance from './Maintenance';
 import Reports from './Reports';
 import Transactions from './Transactions';
 
-export default function Dashboard(){
+function Dashboard(){
   const role = localStorage.getItem('role') || 'user';
   const username = localStorage.getItem('username') || '';
 
@@ -37,3 +37,5 @@ export default function Dashboard(){
     </div>
   );
 }
+
+export default Dashboard;
