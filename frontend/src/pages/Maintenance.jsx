@@ -2,126 +2,227 @@ import React, { useState } from 'react';
 import API from '../api';
 
 export default function Maintenance() {
-  const [subTab, setSubTab] = useState('membership');
-  const [memType, setMemType] = useState('6 months'); 
-  const [cat, setCat] = useState('Book'); 
+  const [mainTab, setMainTab] = useState("membership");
+  const [mode, setMode] = useState("add");
 
-  // 1. ADD MEMBER
-  const addMember = async (e) => {
-    e.preventDefault();
-    const data = new FormData(e.target);
-    const payload = Object.fromEntries(data); // Converts form to JSON object
+  const [searchKey, setSearchKey] = useState("");
+  const [form, setForm] = useState({});
 
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // ----------------- SEARCH HANDLER -----------------
+  const handleSearch = async () => {
     try {
-       // 👇 Debugging: See exactly what you are sending
-       console.log("Sending Member Data:", payload); 
-       
-       await API.post('/maintenance/add-member', payload);
-       alert("✅ Member Added Successfully!");
-       e.target.reset(); // Clear the form
+      const endpoint =
+        mainTab === "membership"
+          ? `/maintenance/get-member/${searchKey}`
+          : mainTab === "products"
+          ? `/maintenance/get-book/${searchKey}`
+          : `/maintenance/get-user/${searchKey}`;
+
+      const res = await API.get(endpoint);
+      setForm(res.data);
+      alert("Record found and loaded!");
     } catch (err) {
-       // 👇 Now you will see the specific error
-       console.error("API Error:", err);
-       alert("❌ Error: " + (err.response?.data?.message || "Server connection failed"));
+      alert("Not found!");
     }
   };
 
-  // 2. ADD BOOK / MOVIE
-  const addProduct = async (e) => {
+  // ----------------- ADD HANDLER -----------------
+  const handleAdd = async (e) => {
     e.preventDefault();
-    const data = new FormData(e.target);
-    const payload = Object.fromEntries(data);
+
+    let endpoint = "";
+    let payload = {};
+
+    if (mainTab === "membership") {
+      endpoint = "/maintenance/add-member";
+      payload = {
+        name: form.name,
+        membershipId: form.membershipId,
+        type: form.type,
+      };
+    }
+
+    if (mainTab === "products") {
+      endpoint = "/maintenance/add-product";
+      payload = {
+        title: form.title,
+        author: form.author,
+        serialNo: form.serialNo,
+        category: form.category,
+      };
+    }
+
+    if (mainTab === "users") {
+      endpoint = "/maintenance/add-user";
+      payload = {
+        username: form.username,
+        password: form.password,
+        name: form.name,
+        role: form.role,
+      };
+    }
 
     try {
-       console.log("Sending Product Data:", payload);
-
-       await API.post('/maintenance/add-product', payload);
-       alert(`✅ ${cat} Added Successfully!`);
-       e.target.reset(); // Clear the form
+      await API.post(endpoint, payload);
+      alert("Added successfully!");
+      setForm({});
     } catch (err) {
-       console.error("API Error:", err);
-       alert("❌ Error: " + (err.response?.data?.message || "Server connection failed"));
+      alert(err.response?.data?.message);
+    }
+  };
+
+  // ----------------- UPDATE HANDLER -----------------
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+
+    let endpoint = "";
+    let payload = {};
+
+    if (mainTab === "membership") {
+      endpoint = `/maintenance/update-member/${searchKey}`;
+      payload = { action: form.action };
+    }
+
+    if (mainTab === "products") {
+      endpoint = `/maintenance/update-product/${searchKey}`;
+      payload = {
+        title: form.title,
+        author: form.author,
+        category: form.category,
+      };
+    }
+
+    if (mainTab === "users") {
+      endpoint = `/maintenance/update-user/${searchKey}`;
+      payload = {
+        name: form.name,
+        role: form.role,
+      };
+    }
+
+    try {
+      await API.put(endpoint, payload);
+      alert("Updated successfully!");
+    } catch (err) {
+      alert(err.response?.data?.message);
     }
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">System Maintenance</h2>
-      
-      <div className="flex gap-4 mb-6 border-b border-gray-300 pb-2">
-        <button 
-          onClick={()=>setSubTab('membership')} 
-          className={`px-4 py-2 font-semibold rounded ${subTab==='membership' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
-        >
-          Membership Management
-        </button>
-        <button 
-          onClick={()=>setSubTab('products')} 
-          className={`px-4 py-2 font-semibold rounded ${subTab==='products' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
-        >
-          Book/Movie Management
-        </button>
+
+      {/* Tabs */}
+      <div className="flex gap-4 mb-6">
+        {["membership", "products", "users"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setMainTab(tab); setForm({}); }}
+            className={`px-5 py-2 border-b-4 font-bold uppercase ${
+              mainTab === tab ? "border-blue-600 text-blue-700" : "border-transparent"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* MEMBERSHIP FORM */}
-      {subTab === 'membership' && (
-        <form onSubmit={addMember} className="bg-white p-6 shadow-lg rounded max-w-lg space-y-4 border border-gray-200">
-           <h3 className="font-bold text-xl mb-2">Add New Member</h3>
-           
-           <div>
-             <label className="block text-sm font-bold mb-1">Full Name</label>
-             <input name="name" placeholder="e.g. John Doe" required className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-           </div>
+      {/* Add / Update Switch */}
+      <div className="flex gap-3 mb-6">
+        <button onClick={() => setMode("add")} className={`px-4 py-2 rounded ${mode==="add"?"bg-black text-white":"bg-gray-200"}`}>Add</button>
+        <button onClick={() => setMode("update")} className={`px-4 py-2 rounded ${mode==="update"?"bg-black text-white":"bg-gray-200"}`}>Update</button>
+      </div>
 
-           <div>
-             <label className="block text-sm font-bold mb-1">Membership ID</label>
-             <input name="membershipId" placeholder="e.g. MEM001" required className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
-           </div>
-           
-           <div>
-             <label className="block text-sm font-bold mb-2">Duration</label>
-             <div className="flex gap-4 bg-gray-50 p-3 rounded border">
-               <label className="cursor-pointer flex items-center gap-2"><input type="radio" name="type" value="6 months" checked={memType==='6 months'} onChange={()=>setMemType('6 months')} /> 6 Months</label>
-               <label className="cursor-pointer flex items-center gap-2"><input type="radio" name="type" value="1 year" checked={memType==='1 year'} onChange={()=>setMemType('1 year')} /> 1 Year</label>
-               <label className="cursor-pointer flex items-center gap-2"><input type="radio" name="type" value="2 years" checked={memType==='2 years'} onChange={()=>setMemType('2 years')} /> 2 Years</label>
-             </div>
-           </div>
-           
-           <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">Add Member</button>
-        </form>
-      )}
+      <form onSubmit={mode === "add" ? handleAdd : handleUpdate} className="bg-white p-6 rounded shadow-md max-w-lg">
 
-      {/* BOOK/MOVIE FORM */}
-      {subTab === 'products' && (
-        <form onSubmit={addProduct} className="bg-white p-6 shadow-lg rounded max-w-lg space-y-4 border border-gray-200">
-           <h3 className="font-bold text-xl mb-2">Add {cat}</h3>
-           
-           <div className="flex gap-4 mb-4">
-             <button type="button" onClick={()=>setCat('Book')} className={`flex-1 py-2 rounded border ${cat==='Book' ? 'bg-blue-100 border-blue-500 text-blue-700 font-bold' : 'bg-gray-50'}`}>Book</button>
-             <button type="button" onClick={()=>setCat('Movie')} className={`flex-1 py-2 rounded border ${cat==='Movie' ? 'bg-blue-100 border-blue-500 text-blue-700 font-bold' : 'bg-gray-50'}`}>Movie</button>
-           </div>
+        {/* ---- SEARCH ---- */}
+        {mode === "update" && (
+          <div className="mb-4 flex gap-2">
+            <input
+              placeholder={
+                mainTab === "membership"
+                  ? "Membership ID"
+                  : mainTab === "products"
+                  ? "Serial No"
+                  : "Username"
+              }
+              className="border p-2 w-full"
+              value={searchKey}
+              onChange={(e) => setSearchKey(e.target.value)}
+            />
+            <button type="button" onClick={handleSearch} className="bg-blue-600 text-white px-4">
+              Search
+            </button>
+          </div>
+        )}
 
-           {/* Hidden input to send the category to backend */}
-           <input type="hidden" name="category" value={cat} />
+        {/* ---------------- MEMBERSHIP FORM ---------------- */}
+        {mainTab === "membership" && (
+          <>
+            <input name="name" value={form.name || ""} onChange={handleChange} placeholder="Member Name" className="border p-2 w-full mb-2" />
 
-           <div>
-             <label className="block text-sm font-bold mb-1">{cat} Title</label>
-             <input name="title" placeholder={`Enter ${cat} Name`} required className="w-full border p-2 rounded" />
-           </div>
+            {mode === "add" && (
+              <>
+                <input name="membershipId" value={form.membershipId || ""} onChange={handleChange} placeholder="Membership ID" className="border p-2 w-full mb-2" />
 
-           <div>
-             <label className="block text-sm font-bold mb-1">{cat === 'Book' ? 'Author' : 'Director'}</label>
-             <input name="author" placeholder={cat === 'Book' ? "Author Name" : "Director Name"} required className="w-full border p-2 rounded" />
-           </div>
+                <select name="type" className="border p-2 w-full mb-2" onChange={handleChange}>
+                  <option value="6 months">6 Months</option>
+                  <option value="1 year">1 Year</option>
+                  <option value="2 years">2 Years</option>
+                </select>
+              </>
+            )}
 
-           <div>
-             <label className="block text-sm font-bold mb-1">Serial Number</label>
-             <input name="serialNo" placeholder="Unique ID (e.g. BK-101)" required className="w-full border p-2 rounded" />
-           </div>
-           
-           <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">Save {cat}</button>
-        </form>
-      )}
+            {mode === "update" && (
+              <select name="action" className="border p-2 w-full mb-2" onChange={handleChange}>
+                <option value="extend">Extend 6 months</option>
+                <option value="cancel">Cancel Membership</option>
+              </select>
+            )}
+          </>
+        )}
+
+        {/* ---------------- PRODUCTS FORM ---------------- */}
+        {mainTab === "products" && (
+          <>
+            <input name="serialNo" disabled={mode==="update"} value={form.serialNo || ""} onChange={handleChange} placeholder="Serial No" className="border p-2 w-full mb-2" />
+
+            <input name="title" value={form.title || ""} onChange={handleChange} placeholder="Title" className="border p-2 w-full mb-2" />
+
+            <input name="author" value={form.author || ""} onChange={handleChange} placeholder="Author / Director" className="border p-2 w-full mb-2" />
+
+            <select name="category" className="border p-2 w-full mb-2" onChange={handleChange} value={form.category}>
+              <option value="Book">Book</option>
+              <option value="Movie">Movie</option>
+            </select>
+          </>
+        )}
+
+        {/* ---------------- USERS FORM ---------------- */}
+        {mainTab === "users" && (
+          <>
+            <input name="username" disabled={mode==="update"} value={form.username || ""} onChange={handleChange} placeholder="Username" className="border p-2 w-full mb-2" />
+
+            {mode === "add" && (
+              <input name="password" type="password" value={form.password || ""} onChange={handleChange} placeholder="Password" className="border p-2 w-full mb-2" />
+            )}
+
+            <input name="name" value={form.name || ""} onChange={handleChange} placeholder="Full Name" className="border p-2 w-full mb-2" />
+
+            <select name="role" className="border p-2 w-full mb-2" onChange={handleChange} value={form.role || "user"}>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </>
+        )}
+
+        <button className="bg-green-600 text-white px-4 py-2 w-full mt-3">
+          {mode === "add" ? "Add" : "Update"}
+        </button>
+      </form>
     </div>
   );
 }
