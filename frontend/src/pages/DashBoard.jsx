@@ -1,11 +1,11 @@
-
+import React from 'react'; // Don't forget to import React
 import { Routes, Route, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Maintenance from './Maintenance';
 import Reports from './Reports';
 import Transactions from './Transactions';
 
-function Dashboard(){
+function Dashboard() {
   const role = localStorage.getItem('role') || 'user';
   const username = localStorage.getItem('username') || '';
 
@@ -20,17 +20,39 @@ function Dashboard(){
 
       <div className="flex gap-4">
         <aside className="w-56 space-y-2">
-          {role === 'admin' && <Link className="block p-2 bg-white rounded shadow" to="maintenance">Maintenance</Link>}
-          <Link className="block p-2 bg-white rounded shadow" to="reports">Reports</Link>
-          <Link className="block p-2 bg-white rounded shadow" to="transactions">Transactions</Link>
+          {/* FIX: Added "/dashboard/" to all paths to make them absolute */}
+          {role === 'admin' && (
+            <Link 
+              className="block p-2 bg-white rounded shadow hover:bg-gray-50" 
+              to="/dashboard/maintenance"
+            >
+              Maintenance
+            </Link>
+          )}
+          <Link 
+            className="block p-2 bg-white rounded shadow hover:bg-gray-50" 
+            to="/dashboard/reports"
+          >
+            Reports
+          </Link>
+          <Link 
+            className="block p-2 bg-white rounded shadow hover:bg-gray-50" 
+            to="/dashboard/transactions"
+          >
+            Transactions
+          </Link>
         </aside>
 
         <main className="flex-1">
+          {/* NOTE: The Routes here remain relative because they are inside 
+             a parent Route (/dashboard/*) defined in App.js.
+             This part was already correct. 
+          */}
           <Routes>
-            <Route path="/" element={<div className="p-4 bg-white rounded shadow">Select menu</div>} />
-            <Route path="maintenance" element={<Maintenance/>} />
-            <Route path="reports" element={<Reports/>} />
-            <Route path="transactions" element={<Transactions/>} />
+            <Route path="/" element={<div className="p-4 bg-white rounded shadow">Select an option from the menu</div>} />
+            <Route path="maintenance" element={<Maintenance />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="transactions" element={<Transactions />} />
           </Routes>
         </main>
       </div>
