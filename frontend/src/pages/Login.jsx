@@ -2,26 +2,30 @@ import React, { useState } from 'react';
 import API from '../api';
 import { useNavigate } from 'react-router-dom';
 
-export default function Login(){
-  const [form,setForm] = useState({ username:'', password:'' });
-  const [err,setErr] = useState('');
+export default function Login({ setToken }) { 
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [err, setErr] = useState('');
   const nav = useNavigate();
 
-const submit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await API.post('/auth/login', form);
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post('/auth/login', form);
 
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('role', res.data.role);
-    localStorage.setItem('username', res.data.username);
-    localStorage.setItem('userid', res.data.id);
+      // Save to storage (for persistence)
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('role', res.data.role);
+      localStorage.setItem('username', res.data.username);
+      localStorage.setItem('userid', res.data.id);
 
-    nav('/dashboard', { replace: true });  // ⭐ force redirect
-  } catch (err) {
-    setErr(err.response?.data?.message || 'Login failed');
-  }
-};
+      // 2. Update the App state (Triggers re-render of App.js)
+      setToken(res.data.token); 
+
+      nav('/dashboard', { replace: true });
+    } catch (err) {
+      setErr(err.response?.data?.message || 'Login failed');
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center">

@@ -15,12 +15,11 @@ router.post('/add-product', async (req, res) => {
     }
 });
 
-// ADD MEMBERSHIP
+
 router.post('/add-member', async (req, res) => {
     try {
         const { name, membershipId, type } = req.body;
-        
-        // Calculate Expiry
+        console.log(req.body);
         let expiry = new Date();
         if (type === '6 months') expiry.setMonth(expiry.getMonth() + 6);
         if (type === '1 year') expiry.setFullYear(expiry.getFullYear() + 1);

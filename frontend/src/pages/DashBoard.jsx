@@ -20,7 +20,6 @@ function Dashboard() {
 
       <div className="flex gap-4">
         <aside className="w-56 space-y-2">
-          {/* FIX: Added "/dashboard/" to all paths to make them absolute */}
           {role === 'admin' && (
             <Link 
               className="block p-2 bg-white rounded shadow hover:bg-gray-50" 
@@ -44,10 +43,6 @@ function Dashboard() {
         </aside>
 
         <main className="flex-1">
-          {/* NOTE: The Routes here remain relative because they are inside 
-             a parent Route (/dashboard/*) defined in App.js.
-             This part was already correct. 
-          */}
           <Routes>
             <Route path="/" element={<div className="p-4 bg-white rounded shadow">Select an option from the menu</div>} />
             <Route path="maintenance" element={<Maintenance />} />
