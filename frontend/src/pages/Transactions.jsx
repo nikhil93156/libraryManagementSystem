@@ -1,149 +1,154 @@
-import React, { useEffect, useState } from 'react';
-import API from '../api';
-import { useNavigate } from 'react-router-dom'; // Assuming you use react-router
+import React, { useState, useEffect } from 'react';
+import API from '../api'
 
 export default function Transactions() {
+  const [tab, setTab] = useState('availability');
   const [books, setBooks] = useState([]);
-  const [msg, setMsg] = useState('');
-  const [fine, setFine] = useState(0); // Track if user owes money
-  const userid = localStorage.getItem('userid');
-  const navigate = useNavigate();
+  const [issueData, setIssueData] = useState({ bookId: '', author: '', issueDate: '', returnDate: '' });
+  const [returnState, setReturnState] = useState(null); // Stores fine calculation
+  const [finePaid, setFinePaid] = useState(false);
+  const [remarks, setRemarks] = useState('');
 
-  const loadBooks = async () => {
+  const userId = localStorage.getItem('userid'); // Assuming user is logged in
+
+  useEffect(() => {
+    API.get('/books').then(res => setBooks(res.data)).catch(console.error);
+  }, []);
+
+  // HANDLE ISSUE TAB LOGIC
+  const handleBookSelect = (e) => {
+    const bookId = e.target.value;
+    const book = books.find(b => b._id === bookId);
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Calculate max return date (15 days)
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 15);
+    
+    setIssueData({
+      bookId,
+      author: book ? book.author : '', // Auto-populate (Source 6)
+      issueDate: today,
+      returnDate: maxDate.toISOString().split('T')[0] // Default 15 days (Source 7)
+    });
+  };
+
+  const submitIssue = async (e) => {
+    e.preventDefault();
     try {
-      const res = await API.get('/books');
-      setBooks(res.data);
+        await API.post('/transactions/issue', { ...issueData, userId });
+        alert("Book Issued Successfully");
+        window.location.reload();
     } catch (err) {
-      console.error("Failed to load books");
+        alert(err.response?.data?.message || "Error");
     }
   };
 
-  useEffect(() => { loadBooks(); }, []);
-
-  // --- ACTIONS ---
-
-  const handleLogout = () => {
-    localStorage.removeItem('userid');
-    localStorage.removeItem('token'); // If you use tokens
-    navigate('/login'); // Redirect to login
+  // HANDLE RETURN TAB LOGIC
+  const checkFine = async (bookId) => {
+      const res = await API.post('/transactions/calculate-fine', { bookId });
+      setReturnState(res.data); // Contains fine amount
   };
 
-  const issue = async (bookId) => {
-    try {
-      await API.post('/transactions/issue', { bookId, userId: userid });
-      setMsg('Book issued successfully!');
-      setFine(0);
-      loadBooks();
-    } catch (err) {
-      setMsg(err.response?.data?.message || 'Error issuing book');
-    }
-  };
-
-  const returnBook = async (bookId) => {
-    try {
-      const res = await API.post('/transactions/return', { bookId, userId: userid });
-      
-      // Check if backend returned a fine amount
-      if (res.data.fineAmount > 0) {
-        setFine(res.data.fineAmount);
-        setMsg(`Book returned. You have a fine of $${res.data.fineAmount}`);
-      } else {
-        setMsg('Book returned successfully. No fine.');
-        setFine(0);
+  const submitReturn = async () => {
+      if (returnState.fine > 0 && !finePaid) return alert("Please confirm fine is paid.");
+      try {
+          await API.post('/transactions/return', { 
+              transactionId: returnState.transaction._id, 
+              finePaid, 
+              remarks 
+          });
+          alert("Book Returned");
+          setReturnState(null);
+          window.location.reload();
+      } catch (err) {
+          alert("Error returning book");
       }
-      
-      loadBooks();
-    } catch (err) {
-      setMsg(err.response?.data?.message || 'Error returning book');
-    }
-  };
-
-  const payFine = async () => {
-    try {
-      await API.post('/transactions/pay-fine', { userId: userid, amount: fine });
-      setMsg('Fine paid successfully!');
-      setFine(0);
-    } catch (err) {
-      setMsg('Error processing payment');
-    }
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      
-      {/* Header with Logout */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Library Transactions</h2>
-        <button 
-          onClick={handleLogout} 
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Log Out
-        </button>
+    <div className="p-6">
+      <div className="flex gap-4 mb-6 border-b pb-2">
+        {['availability', 'issue', 'return'].map(t => (
+           <button key={t} onClick={()=>setTab(t)} className={`uppercase font-bold ${tab===t?'text-blue-600':''}`}>{t}</button>
+        ))}
       </div>
 
-      {/* Fine Notification Section */}
-      {fine > 0 && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
-          <span><strong>Alert:</strong> You have an outstanding fine of ${fine}.</span>
-          <button 
-            onClick={payFine}
-            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-800"
-          >
-            Pay Fine Now
-          </button>
-        </div>
+      {/* TAB 1: AVAILABILITY */}
+      {tab === 'availability' && (
+        <table className="w-full text-left bg-white shadow p-4">
+            <thead><tr><th>Select</th><th>Title</th><th>Author</th><th>Category</th><th>Status</th></tr></thead>
+            <tbody>
+                {books.map(b => (
+                    <tr key={b._id} className="border-b">
+                        <td><input type="radio" name="search" /></td>
+                        <td>{b.title}</td>
+                        <td>{b.author}</td>
+                        <td>{b.category}</td>
+                        <td className={b.available?'text-green-600':'text-red-600'}>{b.available?'Available':'Issued'}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
       )}
 
-      {/* Feedback Message */}
-      {msg && <div className="mb-4 p-2 bg-blue-100 text-blue-700 rounded text-center">{msg}</div>}
+      {/* TAB 2: ISSUE BOOK */}
+      {tab === 'issue' && (
+        <form onSubmit={submitIssue} className="bg-white p-6 shadow max-w-md space-y-4">
+            <h3 className="font-bold">Issue Book</h3>
+            
+            <select onChange={handleBookSelect} required className="w-full border p-2">
+                <option value="">Select Book...</option>
+                {books.filter(b => b.available).map(b => <option key={b._id} value={b._id}>{b.title}</option>)}
+            </select>
 
-      {/* Book List */}
-      <div className="bg-white p-4 rounded shadow overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-3 border-b">Title</th>
-              <th className="p-3 border-b">Author</th>
-              <th className="p-3 border-b">Available Copies</th>
-              <th className="p-3 border-b">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {books.map(b => (
-              <tr key={b._id} className="hover:bg-gray-50">
-                <td className="p-3 border-b">{b.title}</td>
-                <td className="p-3 border-b">{b.author}</td>
-                <td className="p-3 border-b font-semibold">
-                  {b.available > 0 ? (
-                    <span className="text-green-600">{b.available}</span>
-                  ) : (
-                    <span className="text-red-600">Out of Stock</span>
-                  )}
-                </td>
-                <td className="p-3 border-b space-x-2">
-                  {/* ISSUE BUTTON */}
-                  <button 
-                    disabled={b.available < 1} 
-                    onClick={() => issue(b._id)} 
-                    className={`px-3 py-1 rounded ${b.available < 1 ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                  >
-                    Issue
-                  </button>
+            {/* Read Only Author (Source 6) */}
+            <input value={issueData.author} readOnly placeholder="Author (Auto-filled)" className="w-full bg-gray-100 border p-2" />
 
-                  {/* RETURN BUTTON */}
-                  <button 
-                    onClick={() => returnBook(b._id)} 
-                    className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600"
-                  >
-                    Return
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            <div className="grid grid-cols-2 gap-2">
+                <label>Issue Date</label>
+                <input type="date" value={issueData.issueDate} readOnly className="border p-2 bg-gray-100" />
+                
+                <label>Return Date (Max 15d)</label>
+                <input type="date" value={issueData.returnDate} 
+                       onChange={e=>setIssueData({...issueData, returnDate: e.target.value})}
+                       max={new Date(new Date().setDate(new Date().getDate() + 15)).toISOString().split('T')[0]} 
+                       className="border p-2" />
+            </div>
+            <button className="bg-blue-600 text-white w-full py-2">Confirm Issue</button>
+        </form>
+      )}
+
+      {/* TAB 3: RETURN & PAY FINE */}
+      {tab === 'return' && (
+          <div className="bg-white p-6 shadow max-w-md space-y-4">
+              {!returnState ? (
+                  <>
+                    <h3 className="font-bold">Select Book to Return</h3>
+                    <select onChange={(e)=>checkFine(e.target.value)} className="w-full border p-2">
+                        <option>Select Book...</option>
+                        {books.filter(b => !b.available).map(b => <option key={b._id} value={b._id}>{b.title}</option>)}
+                    </select>
+                  </>
+              ) : (
+                  <div className="space-y-3">
+                      <h3 className="font-bold text-lg">Pay Fine Details</h3>
+                      <p>Fine Amount: <span className="text-red-600 font-bold">${returnState.fine}</span></p>
+                      
+                      {/* Mandatory Checkbox (Source 15) */}
+                      {returnState.fine > 0 && (
+                          <label className="flex gap-2 items-center bg-red-50 p-2 rounded border border-red-200">
+                              <input type="checkbox" onChange={e=>setFinePaid(e.target.checked)} />
+                              I confirm the fine has been paid.
+                          </label>
+                      )}
+                      
+                      <textarea placeholder="Remarks (Optional)" onChange={e=>setRemarks(e.target.value)} className="w-full border p-2"></textarea>
+                      <button onClick={submitReturn} className="bg-green-600 text-white w-full py-2">Confirm Return</button>
+                  </div>
+              )}
+          </div>
+      )}
     </div>
   );
 }

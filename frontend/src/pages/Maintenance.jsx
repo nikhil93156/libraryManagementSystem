@@ -1,73 +1,67 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import API from '../api';
-import BookForm from '../components/BookForm';
 
-export default function Maintenance(){
-  const [books,setBooks] = useState([]);
-  const [editing,setEditing] = useState(null);
-  const [msg,setMsg] = useState('');
+export default function Maintenance() {
+  const [subTab, setSubTab] = useState('membership');
+  const [memType, setMemType] = useState('6 months'); // Default (Source 17)
+  const [cat, setCat] = useState('Book'); // Default (Source 19)
 
-  const load = async () => {
-    try {
-      const res = await API.get('/books');
-      setBooks(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+  const addMember = async (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    await API.post('/maintenance/add-member', Object.fromEntries(data));
+    alert("Member Added");
   };
 
-  useEffect(()=>{ load(); }, []);
-
-  const create = async (data) => {
-    await API.post('/books', data);
-    setMsg('Book added');
-    load();
-  };
-
-  const update = async (data) => {
-    await API.put(`/books/${editing._id}`, data);
-    setEditing(null);
-    setMsg('Updated');
-    load();
-  };
-
-  const remove = async (id) => {
-    if(!confirm('Delete?')) return;
-    await API.delete(`/books/${id}`);
-    load();
+  const addProduct = async (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    await API.post('/maintenance/add-product', Object.fromEntries(data));
+    alert("Product Added");
   };
 
   return (
-    <div>
-      <h2 className="text-xl mb-3">Maintenance (Books CRUD)</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="mb-2">{editing ? 'Edit Book' : 'Add Book'}</h3>
-          <BookForm initial={editing||{}} onSubmit={editing? update : create} />
-          {editing && <button className="mt-2 text-sm" onClick={()=>setEditing(null)}>Cancel</button>}
-        </div>
-
-        <div className="bg-white p-4 rounded shadow col-span-1">
-          <h3 className="mb-2">Book List</h3>
-          <table className="w-full text-sm">
-            <thead><tr className="text-left"><th>Title</th><th>Author</th><th>Avail</th><th>Actions</th></tr></thead>
-            <tbody>
-              {books.map(b=>(
-                <tr key={b._id} className="border-t">
-                  <td>{b.title}</td>
-                  <td>{b.author}</td>
-                  <td>{b.available}/{b.copies}</td>
-                  <td className="space-x-2">
-                    <button onClick={()=>setEditing(b)} className="text-blue-600">Edit</button>
-                    <button onClick={()=>remove(b._id)} className="text-red-600">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div className="p-6">
+      <div className="flex gap-4 mb-6">
+        <button onClick={()=>setSubTab('membership')} className="btn border p-2">Membership</button>
+        <button onClick={()=>setSubTab('products')} className="btn border p-2">Books/Movies</button>
       </div>
-      {msg && <div className="mt-3 text-green-600">{msg}</div>}
+
+      {/* MEMBERSHIP FORM */}
+      {subTab === 'membership' && (
+        <form onSubmit={addMember} className="bg-white p-6 shadow max-w-lg space-y-4">
+           <h3 className="font-bold">Add Membership</h3>
+           <input name="name" placeholder="Name" required className="w-full border p-2" />
+           <input name="membershipId" placeholder="Membership ID" required className="w-full border p-2" />
+           
+           {/* Source 17: Radio Selection */}
+           <div className="flex gap-4">
+             <label><input type="radio" name="type" value="6 months" checked={memType==='6 months'} onChange={()=>setMemType('6 months')} /> 6 Months</label>
+             <label><input type="radio" name="type" value="1 year" checked={memType==='1 year'} onChange={()=>setMemType('1 year')} /> 1 Year</label>
+             <label><input type="radio" name="type" value="2 years" checked={memType==='2 years'} onChange={()=>setMemType('2 years')} /> 2 Years</label>
+           </div>
+           <button className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
+        </form>
+      )}
+
+      {/* BOOK/MOVIE FORM */}
+      {subTab === 'products' && (
+        <form onSubmit={addProduct} className="bg-white p-6 shadow max-w-lg space-y-4">
+           <h3 className="font-bold">Add Book/Movie</h3>
+           
+           {/* Source 19: Category Selection */}
+           <div className="flex gap-4">
+             <label><input type="radio" name="category" value="Book" checked={cat==='Book'} onChange={()=>setCat('Book')} /> Book</label>
+             <label><input type="radio" name="category" value="Movie" checked={cat==='Movie'} onChange={()=>setCat('Movie')} /> Movie</label>
+           </div>
+
+           <input name="title" placeholder="Title" required className="w-full border p-2" />
+           <input name="author" placeholder={cat==='Book'?'Author':'Director'} required className="w-full border p-2" />
+           <input name="serialNo" placeholder="Serial No" required className="w-full border p-2" />
+           
+           <button className="bg-blue-600 text-white px-4 py-2 rounded">Add {cat}</button>
+        </form>
+      )}
     </div>
   );
 }

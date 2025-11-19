@@ -1,73 +1,80 @@
 const express = require('express');
 const router = express.Router();
-const Book = require('../models/Book');
 const Transaction = require('../models/Transaction');
+const Book = require('../models/Book');
 
-// 1. Issue Book
+// ISSUE BOOK (With 15-day Validation)
 router.post('/issue', async (req, res) => {
-  const { bookId, userId } = req.body;
-  
-  try {
-    const book = await Book.findById(bookId);
-    if (book.available < 1) return res.status(400).json({ message: 'Book not available' });
-
-    // Check if user already has this book
-    const existing = await Transaction.findOne({ userId, bookId, status: 'Issued' });
-    if (existing) return res.status(400).json({ message: 'You already have this book' });
-
-    const transaction = new Transaction({ userId, bookId });
-    await transaction.save();
-
-    book.available -= 1;
-    await book.save();
-
-    res.json({ message: 'Book issued successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// 2. Return Book (Calculates Fine)
-router.post('/return', async (req, res) => {
-  const { bookId, userId } = req.body;
+  const { bookId, userId, issueDate, returnDate } = req.body;
 
   try {
-    const transaction = await Transaction.findOne({ userId, bookId, status: 'Issued' });
-    if (!transaction) return res.status(400).json({ message: 'Transaction not found' });
+    // Validate 15 Days Logic
+    const start = new Date(issueDate);
+    const end = new Date(returnDate);
+    const diffDays = (end - start) / (1000 * 60 * 60 * 24);
 
-    const book = await Book.findById(bookId);
-    
-    // logic: Calculate Fine (e.g., 10 currency units per day after 7 days)
-    const returnDate = new Date();
-    const issueDate = new Date(transaction.issueDate);
-    const diffTime = Math.abs(returnDate - issueDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
-    let fine = 0;
-    if (diffDays > 7) {
-        fine = (diffDays - 7) * 10; // 10 fine per late day
+    if (diffDays > 15) {
+      return res.status(400).json({ message: "Return date cannot be more than 15 days from issue date." });
     }
 
-    transaction.returnDate = returnDate;
-    transaction.status = 'Returned';
-    transaction.fine = fine;
+    const book = await Book.findById(bookId);
+    if (!book.available) return res.status(400).json({ message: "Book not available" });
+
+    const transaction = new Transaction({ bookId, userId, issueDate, returnDate });
     await transaction.save();
 
-    book.available += 1;
+    book.available = false;
     await book.save();
 
-    res.json({ message: `Book returned. Fine to pay: ${fine}`, fineAmount: fine });
+    res.json({ message: "Book issued successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// 3. Pay Fine
-router.post('/pay-fine', async (req, res) => {
-    const { userId, amount } = req.body;
-    // In a real app, integrate Stripe/PayPal here. 
-    // Here we just acknowledge the request.
-    res.json({ message: `Payment of ${amount} received. Account cleared.` });
+// CALCULATE FINE (Pre-Return Check)
+router.post('/calculate-fine', async (req, res) => {
+    const { bookId } = req.body;
+    try {
+        const trans = await Transaction.findOne({ bookId, actualReturnDate: null }).populate('bookId');
+        if (!trans) return res.status(404).json({ message: "Transaction not found" });
+
+        const today = new Date();
+        const promised = new Date(trans.returnDate);
+        let fine = 0;
+
+        // Logic: 10 Rs per day late
+        if (today > promised) {
+            const diffTime = Math.abs(today - promised);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            fine = diffDays * 10;
+        }
+
+        res.json({ transaction: trans, fine, today });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// COMPLETE RETURN
+router.post('/return', async (req, res) => {
+    const { transactionId, finePaid, remarks } = req.body;
+    try {
+        const trans = await Transaction.findById(transactionId);
+        const book = await Book.findById(trans.bookId);
+
+        trans.actualReturnDate = new Date();
+        trans.finePaid = finePaid;
+        trans.remarks = remarks;
+        trans.save();
+
+        book.available = true;
+        book.save();
+
+        res.json({ message: "Book Returned" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 module.exports = router;
