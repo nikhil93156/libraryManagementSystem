@@ -33,7 +33,7 @@ export default function Reports() {
             ) : activeTab === 'active' || activeTab === 'overdue' ? (
                <><th>Book</th><th>User</th><th>Issue Date</th><th>Return Date</th></>
             ) : (
-               <><th>Serial</th><th>Title</th><th>Author/Dir</th><th>Available</th></>
+               <><th>Serial</th><th>Title</th><th>Author/Dir</th><th>Available</th><th>Quantity</th></>
             )}
           </tr>
         </thead>
@@ -50,7 +50,7 @@ export default function Reports() {
                    <td className={activeTab==='overdue'?'text-red-600 font-bold':''}>{new Date(row.returnDate).toLocaleDateString()}</td>
                  </>
                ) : (
-                 <><td>{row.serialNo}</td><td>{row.title}</td><td>{row.author}</td><td>{row.available?'Yes':'No'}</td></>
+                 <><td>{row.serialNo}</td><td>{row.title}</td><td>{row.author}</td><td>{row.available?'Yes':'No'}</td><td>{row.quantity}</td></>
                )}
             </tr>
           ))}

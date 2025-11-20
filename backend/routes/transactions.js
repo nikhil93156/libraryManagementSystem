@@ -20,6 +20,9 @@ router.post('/issue', async (req, res) => {
 
     // Check Availability
     const book = await Book.findById(bookId);
+    if(book){
+      book.quantity=book.quantity-1;
+    }
     if (!book || !book.available) {
       return res.status(400).json({ message: "Book is currently unavailable" });
     }

@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const BookSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  author: { type: String, required: true }, // Serves as "Director" if category is Movie
+  author: { type: String, required: true },
+  quantity:{type:Number,required: true}, 
   serialNo: { type: String, required: true, unique: true },
   
   // 👇 This field matches the radio buttons in your frontend

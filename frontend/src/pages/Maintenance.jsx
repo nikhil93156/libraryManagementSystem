@@ -52,6 +52,7 @@ export default function Maintenance() {
         title: form.title,
         author: form.author,
         serialNo: form.serialNo,
+        quantity: form.quantity,
         category: form.category,
       };
     }
@@ -92,6 +93,7 @@ export default function Maintenance() {
       payload = {
         title: form.title,
         author: form.author,
+        quantity: form.quantity,
         category: form.category,
       };
     }
@@ -193,7 +195,7 @@ export default function Maintenance() {
             <input name="title" value={form.title || ""} onChange={handleChange} placeholder="Title" className="border p-2 w-full mb-2" />
 
             <input name="author" value={form.author || ""} onChange={handleChange} placeholder="Author / Director" className="border p-2 w-full mb-2" />
-
+            <input name="quantity" value={form.quantity || ""} onChange={handleChange} placeholder="Quantity" className="border p-2 w-full mb-2" />
             <select name="category" className="border p-2 w-full mb-2" onChange={handleChange} value={form.category}>
               <option value="Book">Book</option>
               <option value="Movie">Movie</option>

@@ -174,6 +174,7 @@ export default function Transactions() {
                    <th className="p-3">Author/Director</th>
                    <th className="p-3">Category</th>
                    <th className="p-3">Status</th>
+                   <th className="p-3">Quantity</th>
                  </tr>
                </thead>
                <tbody>
@@ -192,6 +193,7 @@ export default function Transactions() {
                          ? <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded">Available</span> 
                          : <span className="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">Issued</span>}
                      </td>
+                     <td className="p-3">{b.quantity}</td>
                    </tr>
                  ))}
                </tbody>

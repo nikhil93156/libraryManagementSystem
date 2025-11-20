@@ -5,7 +5,7 @@ const Book = require("../models/Book");
 const Member = require("../models/Member");
 const User = require("../models/User");
 
-// ---------------- ADD MEMBER ----------------
+
 router.post("/add-member", async (req, res) => {
   try {
     const { name, membershipId, type } = req.body;
@@ -35,7 +35,7 @@ router.get("/get-member/:id", async (req, res) => {
   }
 });
 
-// ---------------- UPDATE MEMBER ----------------
+
 router.put("/update-member/:id", async (req, res) => {
   try {
     const { action } = req.body;
@@ -58,11 +58,11 @@ router.put("/update-member/:id", async (req, res) => {
   }
 });
 
-// ---------------- ADD PRODUCT ----------------
+
 router.post("/add-product", async (req, res) => {
   try {
-    const { title, author, serialNo, category } = req.body;
-    await Book.create({ title, author, serialNo, category });
+    const { title, author, serialNo, category,quantity } = req.body;
+    await Book.create({ title, author, serialNo, category ,quantity});
 
     res.json({ message: `${category} Added Successfully` });
   } catch (err) {
